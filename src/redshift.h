@@ -38,10 +38,19 @@ typedef enum {
 	PERIOD_TRANSITION
 } period_t;
 
+/* Effect types. */
+typedef enum {
+	EFFECT_TYPE_NONE = 0,
+	EFFECT_TYPE_MULTIPLY,
+	EFFECT_TYPE_INVERSE,
+} effect_type_t;
+
 /* Color setting */
 typedef struct {
 	int temperature;
 	float gamma[3];
+  effect_type_t effect_type;
+	float effect[3];
 	float brightness;
 } color_setting_t;
 

@@ -444,6 +444,8 @@ print_help(const char *program_name)
 	fputs(_("  -b DAY:NIGHT\tScreen brightness to apply (between 0.1 and 1.0)\n"
                 "  -c FILE\tLoad settings from specified configuration file\n"
 		"  -g R:G:B\tAdditional gamma correction to apply\n"
+		"  -f TYPE R:G:B\tAdditional filter TYPE (multiply|inverse).. \n"
+		"               \t..to apply with R:G:B parameters.\n"
 		"  -l LAT:LON\tYour current location\n"
 		"  -l PROVIDER\tSelect provider for automatic"
 		" location updates\n"
@@ -806,7 +808,7 @@ run_continual_mode(const location_t *loc,
 	   did not change. */
 	period_t prev_period = PERIOD_NONE;
 	color_setting_t prev_interp =
-		{ -1, { NAN, NAN, NAN }, NAN };
+		{ -1, { NAN, NAN, NAN }, EFFECT_TYPE_NONE, { NAN, NAN, NAN }, NAN };
 
 	/* Continuously adjust color temperature */
 	int done = 0;
@@ -1018,7 +1020,7 @@ main(int argc, char *argv[])
 
 	/* Parse command line arguments. */
 	int opt;
-	while ((opt = getopt(argc, argv, "b:c:g:hl:m:oO:prt:vVx")) != -1) {
+	while ((opt = getopt(argc, argv, "b:f:c:g:hl:m:oO:prt:vVx")) != -1) {
 		switch (opt) {
 		case 'b':
 			parse_brightness_string(optarg,
@@ -1045,6 +1047,29 @@ main(int argc, char *argv[])
 			memcpy(scheme.night.gamma, scheme.day.gamma,
 			       sizeof(scheme.night.gamma));
 			break;
+		case 'f': {
+			char *effect_type = strsep(&optarg, " ");
+			if (strcmp(effect_type, "multiply") == 0) {
+				scheme.day.effect_type = EFFECT_TYPE_MULTIPLY;
+				scheme.night.effect_type = EFFECT_TYPE_MULTIPLY;
+			}
+			else if (strcmp(effect_type, "inverse") == 0) {
+				scheme.day.effect_type = EFFECT_TYPE_INVERSE;
+				scheme.night.effect_type = EFFECT_TYPE_INVERSE;
+			}
+			char *rgb = strsep(&optarg, " ");
+			r = parse_gamma_string(rgb, scheme.day.effect);
+			if (r < 0) {
+				fputs(_("Malformed color argument.\n"),
+							stderr);
+				fputs(_("Try `-h' for more"
+									" information.\n"), stderr);
+				exit(EXIT_FAILURE);
+			}
+			memcpy(scheme.night.effect, scheme.day.effect,
+						 sizeof(scheme.night.effect));
+			break;
+		}
 		case 'h':
 			print_help(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1478,6 +1503,12 @@ main(int argc, char *argv[])
 		printf(_("Gamma (%s): %.3f, %.3f, %.3f\n"),
 		       _("Night"), scheme.night.gamma[0],
 		       scheme.night.gamma[1], scheme.night.gamma[2]);
+    printf(_("Effect (%s): %.3f, %.3f, %.3f\n"),
+           _("Daytime"), scheme.day.effect[0],
+           scheme.day.effect[1], scheme.day.effect[2]);
+    printf(_("Effect (%s): %.3f, %.3f, %.3f\n"),
+           _("Night"), scheme.night.effect[0],
+           scheme.night.effect[1], scheme.night.effect[2]);
 	}
 
 	/* Initialize gamma adjustment method. If method is NULL
